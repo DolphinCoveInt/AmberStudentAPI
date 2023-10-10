@@ -60,6 +60,9 @@
             <td>
                 @Html.DisplayFor(modelItem => item.ShirtSize.Name)
             </td>
+                <td width="10%">
+                    <a href="@item.StudentIdImageFilePath" target="_blank">View Image</a>
+                </td>
             <td>
                 @Html.ActionLink("Edit", "Edit", new {  id=item.Id  }) |
                 @Html.ActionLink("Detail", "Detail", new {  id=item.Id  }) |

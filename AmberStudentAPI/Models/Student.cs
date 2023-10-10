@@ -17,7 +17,6 @@ namespace AmberStudentInterface.Models
         public string? StudentIdImageFilePath { get; set; } = String.Empty;
 
 
-
         //ForeignKeys
         [ForeignKey("ParishId")]
         public virtual Parish? Parish { get; set; }

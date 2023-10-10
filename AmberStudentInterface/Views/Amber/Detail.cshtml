@@ -7,7 +7,7 @@
 <h1>Detail</h1>
 
 <div>
-    <h4>Students</h4>
+    <h4>StudentsVM2</h4>
     <hr />
     <dl class="row">
         <dt class = "col-sm-2">
@@ -38,19 +38,25 @@
             @Html.DisplayNameFor(model => model.ParishId)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Parish.ParishName)
+            @Html.DisplayFor(model => model.ParishId)
         </dd>
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.CourseId)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Course.Name)
+            @Html.DisplayFor(model => model.CourseId)
         </dd>
         <dt class = "col-sm-2">
             @Html.DisplayNameFor(model => model.ShirtSizeId)
         </dt>
         <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ShirtSize.Name)
+            @Html.DisplayFor(model => model.ShirtSizeId)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.StudentIdImageFilePath)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.StudentIdImageFilePath)
         </dd>
     </dl>
 </div>

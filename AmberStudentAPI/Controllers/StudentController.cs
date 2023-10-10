@@ -4,7 +4,7 @@ using AmberStudentInterface.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using AmberStudentAPI.Models;
 
 namespace AmberStudentInterface.Controllers
 {
@@ -23,11 +23,16 @@ namespace AmberStudentInterface.Controllers
         [HttpGet]
         public IActionResult GetStudents()
         {
-            var students = _ctx.Student
-                .Include(s => s.ShirtSize)
-                .Include(s => s.Course)
-                .Include(s => s.Parish)
-                .ToList();
+            var students = _ctx.Student.Include(s => s.ShirtSize).Include(s => s.Course).Include(s => s.Parish).ToList();
+            if (students == null)
+            {
+                return BadRequest();
+            }
+            var baseUrl = "https://localhost:7141/images/";
+            foreach (var student in students)
+            {
+                student.StudentIdImageFilePath = baseUrl + student.StudentIdImageFilePath;
+            }
 
             return Ok(students);
         }
@@ -46,8 +51,13 @@ namespace AmberStudentInterface.Controllers
                 return NotFound();
             }
 
+            var baseUrl = "https://localhost:7141/images/";
+            student.StudentIdImageFilePath = baseUrl + student.StudentIdImageFilePath;
+
             return Ok(student);
         }
+
+
         //[HttpPost]
         //public async Task<ActionResult<Student>> PostStudent (Student student)
         //{
@@ -62,16 +72,126 @@ namespace AmberStudentInterface.Controllers
 
         //}
 
-        [HttpPost]
-        //[FromBody] tells the program to expects a product that's coming from the body of the request
-        public IActionResult CreateStudent([FromBody] Student student)
-        {
-            _ctx.Student.Add(student);
-            _ctx.SaveChanges();
 
-            //Fetches the most recent created record and adds and Id then display the info
-            return CreatedAtAction(nameof(GetStudentById), new { id = student.Id }, student);
+        [HttpPost]
+        public async Task<IActionResult> Create([FromForm] StudentCreateDTO model)
+        {
+            if (ModelState.IsValid)
+            {
+                // Retrieve the file from the DTO
+                var studentImageFile = model.StudentIdImageFile;
+
+                if (studentImageFile != null && studentImageFile.Length > 0)
+                {
+                    // Generate a unique file name 
+
+                    // 50137a25-920c-469a-b202-4ce1e2a4712c_person-02.jpg
+                    var uniqueFileName = Guid.NewGuid() + "_" + studentImageFile.FileName;
+
+                    // Define the final file path on the API server
+                    var apiFilePath = Path.Combine("uploads", $"{uniqueFileName}");
+
+                    // Save the file to the server
+                    using (var stream = new FileStream(apiFilePath, FileMode.Create))
+                    {
+                        await studentImageFile.CopyToAsync(stream);
+                    }
+
+                    // Store the file path in the database along with other student details
+                    var student = new Student
+                    {
+                        StudentName = model.StudentName,
+                        CourseId = model.CourseId,
+                        StudentIdImageFilePath = apiFilePath != String.Empty ? apiFilePath : "",
+                        ShirtSizeId = model.ShirtSizeId,
+                        ParishId = model.ParishId,
+                        Email = model.Email,
+                        PhoneNumber = model.PhoneNumber,
+
+                    };
+
+                    // Save the student to the database using your data access logic
+                    _ctx.Student.Add(student);
+                    await _ctx.SaveChangesAsync();
+
+                    return CreatedAtAction(nameof(GetStudentById), new { id = student.Id }, student);
+                    //return Ok(bill); // Return a JSON response, indicating success, or the newly created bill
+                }
+            }
+            // If ModelState is not valid or the file is missing, return a validation error response
+            return BadRequest(ModelState);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            // Find the student to delete by ID
+            var student = await _ctx.Student.FindAsync(id);
+
+            if (student == null)
+            {
+                return NotFound(); // Return a 404 Not Found response if the student is not found
+            }
+
+            // Remove the student from the database
+            _ctx.Student.Remove(student);
+            await _ctx.SaveChangesAsync();
+
+            return NoContent(); // Return a 204 No Content response to indicate successful deletion
+        }
+
+
+
+        //Retrieve a link to the uploaded file
+        [HttpGet("files/{fileName}")]
+        public IActionResult GetFile(string fileName)
+        {
+            // Construct the full path to the file based on the provided 'fileName'
+            string filePath = Path.Combine("api", "server", "uploads", fileName);
+
+            // Check if the file exists
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound(); // Or handle the case where the file doesn't exist
+            }
+            // Determine the content type based on the file's extension
+            string contentType = GetContentType(fileName);
+
+            // Return the image file as a FileStreamResult with the appropriate content type
+            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            return new FileStreamResult(fileStream, contentType); // Adjust the content type as needed
+
+        }
+        private string GetContentType(string fileName)
+        {
+            // Determine the content type based on the file's extension
+            string ext = Path.GetExtension(fileName).ToLowerInvariant();
+            switch (ext)
+            {
+                case ".jpg":
+                case ".jpeg":
+                    return "image/jpeg";
+                case ".png":
+                    return "image/png";
+                case ".pdf":
+                    return "application/pdf";
+                default:
+                    return "application/octet-stream"; // Default to binary data
+            }
+        }
+
+
+
+        //[HttpPost]
+        //[FromBody] tells the program to expects a product that's coming from the body of the request
+        //public IActionResult CreateStudent([FromBody] Student student)
+        //{
+        //    _ctx.Student.Add(student);
+        //    _ctx.SaveChanges();
+
+        //    Fetches the most recent created record and adds and Id then display the info
+        //    return CreatedAtAction(nameof(GetStudentById), new { id = student.Id }, student);
+        //}
 
         [HttpPut("{id}")]
         public IActionResult UpdateStudent(int id, [FromBody] Student student)
